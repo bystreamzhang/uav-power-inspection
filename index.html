@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电力低空无人机智能巡检平台</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f4f8;--bg2:#ffffff;--bg3:#f8fafc;
+  --border:#dde3ec;--border2:#c8d3e0;
+  --primary:#0284c7;--primary-dim:#0284c710;--primary-glow:#0284c730;
+  --success:#059669;--warning:#d97706;--danger:#dc2626;--purple:#7c3aed;
+  --text:#374151;--text-dim:#9ca3af;--text-bright:#111827;
+  --sidebar-w:220px;--mono:'Share Tech Mono',monospace;
+}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:13px}
+.layout{display:flex;height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;background:#0c1322;border-right-color:#1c2e44}
+.sidebar .nav-item{color:#94a3b8;}
+.sidebar .nav-item:hover{color:#e2e8f0;background:#0ea5e915;}
+.sidebar .nav-item.active{color:#38bdf8;background:#0ea5e915;border-left-color:#38bdf8;}
+.sidebar .nav-label{color:#64748b;}
+.sidebar .logo-text{color:#f1f5f9;}
+.sidebar .logo-sub{color:#475569;}
+.sidebar .nav-badge{background:#ef444425;color:#f87171;}
+.logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-text{font-size:12px;font-weight:700;color:var(--text-bright);line-height:1.35}
+.logo-sub{font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-top:1px}
+.nav-section{padding:10px 0 4px}
+.nav-label{font-size:9px;color:var(--text-dim);padding:6px 16px 3px;letter-spacing:1.5px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;color:var(--text-dim);transition:all 0.15s;border-left:3px solid transparent;user-select:none}
+.nav-item:hover{color:var(--text);background:var(--primary-dim)}
+.nav-item.active{color:var(--primary);background:var(--primary-dim);border-left-color:var(--primary)}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:#ef444425;color:var(--danger);font-size:10px;padding:1px 6px;border-radius:10px;font-family:var(--mono)}
+.nav-bottom{margin-top:auto;border-top:1px solid var(--border);padding:8px 0}
+
+/* ── TOPBAR ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{height:50px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
+.topbar-title{font-size:13px;font-weight:600;color:var(--text-bright)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.sys-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--success)}
+.sys-dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.topbar-time{font-size:11px;color:var(--text-dim);font-family:var(--mono)}
+.topbar-user{font-size:12px;color:var(--text-dim)}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── STAT CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px 18px;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--primary)}
+.stat-card.green::after{background:var(--success)}
+.stat-card.yellow::after{background:var(--warning)}
+.stat-card.red::after{background:var(--danger)}
+.stat-label{font-size:11px;color:var(--text-dim);margin-bottom:6px}
+.stat-value{font-size:26px;font-weight:700;color:var(--text-bright);font-family:var(--mono)}
+.stat-unit{font-size:13px;color:var(--text-dim);font-family:var(--mono)}
+.stat-sub{font-size:10px;color:var(--text-dim);margin-top:3px}
+.stat-bg-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:28px;opacity:.12}
+
+/* ── CARDS ── */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.card-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:12px;font-weight:600;color:var(--text-bright);display:flex;align-items:center;gap:6px}
+.card-title::before{content:'';width:3px;height:14px;background:var(--primary);border-radius:2px}
+.card-body{padding:18px}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:10px;font-weight:500;color:var(--text-dim);background:var(--bg2);border-bottom:1px solid var(--border);letter-spacing:.5px;text-transform:uppercase}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#0ea5e908;cursor:pointer}
+.td-mono{font-family:var(--mono);font-size:12px}
+.td-primary{color:var(--primary);font-family:var(--mono);font-size:12px}
+.td-bold{font-weight:600;color:var(--text-bright)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-success{background:#10b98120;color:var(--success)}
+.b-warning{background:#f59e0b20;color:var(--warning)}
+.b-danger{background:#ef444420;color:var(--danger)}
+.b-info{background:#0ea5e920;color:var(--primary)}
+.b-gray{background:#47556920;color:var(--text-dim)}
+.b-purple{background:#8b5cf620;color:var(--purple)}
+
+/* ── BUTTONS ── */
+.btn{padding:6px 12px;border-radius:5px;font-size:12px;cursor:pointer;border:none;font-family:'Noto Sans SC',sans-serif;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#38bdf8}
+.btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text-dim)}
+.btn-danger{background:#ef444415;color:var(--danger);border:1px solid #ef444430}
+.btn-sm{padding:3px 9px;font-size:11px}
+.btn-success{background:#10b98120;color:var(--success);border:1px solid #10b98130}
+
+/* ── INPUTS ── */
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;color:var(--text-dim);margin-bottom:5px;display:block}
+.form-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:7px 11px;color:var(--text);font-size:12px;font-family:'Noto Sans SC',sans-serif;outline:none;transition:border .15s}
+.form-input:focus{border-color:var(--primary)}
+select.form-input option{background:var(--bg3)}
+textarea.form-input{resize:vertical}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--bg3);border:1px solid var(--border2);border-radius:10px;width:520px;max-height:82vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-lg{width:640px}
+.modal-header{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg3);z-index:1}
+.modal-title{font-size:13px;font-weight:700;color:var(--text-bright)}
+.modal-close{background:none;border:none;color:var(--text-dim);font-size:17px;cursor:pointer;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:22px}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab{padding:9px 18px;cursor:pointer;font-size:12px;color:var(--text-dim);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;user-select:none}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab:hover:not(.active){color:var(--text)}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-bar .form-input{width:auto}
+
+/* ── GRID HELPERS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* ── PROGRESS ── */
+.progress{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-bar{height:100%;border-radius:2px;transition:width .4s}
+
+/* ── HANGAR CARD ── */
+.hangar-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:18px}
+.hangar-name{font-size:13px;font-weight:700;color:var(--text-bright)}
+.hangar-model{font-size:10px;color:var(--text-dim);margin-top:1px;font-family:var(--mono)}
+.hangar-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.h-metric{background:var(--bg2);padding:9px 10px;border-radius:5px}
+.h-metric-label{font-size:9px;color:var(--text-dim);margin-bottom:2px}
+.h-metric-val{font-size:14px;font-weight:700;color:var(--text-bright);font-family:var(--mono)}
+
+/* ── MAP ── */
+.map-wrap{background:#060e1a;border:1px solid var(--border);border-radius:8px;position:relative;overflow:hidden}
+.map-grid-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(14,165,233,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(14,165,233,.04) 1px,transparent 1px);background-size:42px 42px}
+.map-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(6,14,26,.75) 100%)}
+.map-controls{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:5px}
+.map-info{position:absolute;bottom:14px;left:14px;background:rgba(7,13,24,.88);border:1px solid var(--border2);border-radius:6px;padding:9px 13px;font-size:11px}
+
+/* ── DEFECT CARD ── */
+.defect-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.defect-card{background:var(--bg3);border:1px solid var(--border);border-radius:7px;overflow:hidden;cursor:pointer;transition:border-color .15s}
+.defect-card:hover{border-color:var(--primary)}
+.defect-thumb{height:110px;display:flex;align-items:center;justify-content:center;font-size:36px;position:relative;background:linear-gradient(135deg,#0c1a2e,#1a2a44)}
+.defect-body{padding:11px 13px}
+.defect-type{font-size:12px;font-weight:700;color:var(--text-bright);margin-bottom:3px}
+.defect-loc{font-size:10px;color:var(--text-dim)}
+
+/* ── REPORT ITEM ── */
+.report-row{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:13px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color .15s}
+.report-row:hover{border-color:var(--primary)}
+.report-icon-box{width:40px;height:40px;background:var(--primary-dim);border:1px solid var(--primary-glow);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+
+/* ── ALERT ── */
+.alert-info-box{background:#0ea5e910;border:1px solid #0ea5e930;border-radius:6px;padding:9px 14px;font-size:11px;color:var(--primary);display:flex;align-items:center;gap:7px;margin-bottom:14px}
+
+/* ── ROUTE PANEL ── */
+.route-list-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:7px;overflow:hidden;flex:1}
+.route-item{padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.route-item:last-child{border-bottom:none}
+.route-item:hover,.route-item.active{background:var(--primary-dim)}
+.route-item.active .route-item-name{color:var(--primary)}
+.route-item-name{font-size:12px;font-weight:600;color:var(--text-bright);margin-bottom:2px}
+.route-item-meta{font-size:10px;color:var(--text-dim)}
+
+/* ── DRONE STATUS ── */
+.drone-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.drone-card-sm{background:var(--bg2);border-radius:6px;padding:9px 11px;border:1px solid var(--border)}
+.drone-card-sm:hover{border-color:var(--border2)}
+
+/* ── REMOTE CONTROLS ── */
+.remote-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.remote-btn{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:13px;text-align:center;cursor:pointer;transition:all .15s;user-select:none}
+.remote-btn:hover{background:var(--primary-dim);border-color:var(--primary)}
+.remote-btn.active{background:var(--primary-dim);border-color:var(--primary)}
+.remote-btn-icon{font-size:22px;margin-bottom:5px}
+.remote-btn-label{font-size:11px;font-weight:700;color:var(--text-bright)}
+.remote-btn-desc{font-size:10px;color:var(--text-dim);margin-top:2px}
+
+/* ── MISC ── */
+.section-title{font-size:12px;font-weight:700;color:var(--text-bright);display:flex;align-items:center;gap:7px;margin-bottom:14px}
+.section-title::before{content:'';width:3px;height:15px;background:var(--primary);border-radius:2px}
+
+/* ── DOC IMAGES ── */
+.doc-img-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.doc-img-label{font-size:10px;color:var(--text-dim);padding:6px 12px;border-top:1px solid var(--border);text-align:center}
+.doc-img{width:100%;display:block;object-fit:contain}
+.doc-img-cover{width:100%;display:block;object-fit:cover;height:160px}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="layout">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">电力低空无人机<br>智能巡检平台</div>
+        <div class="logo-sub">POWER GRID UAV v2.1</div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">总览</div>
+      <div class="nav-item" :class="{active:page==='dashboard'}" @click="page='dashboard'">
+        <span class="nav-icon">📊</span>首页总览
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">设备管理</div>
+      <div class="nav-item" :class="{active:page==='hangar'}" @click="page='hangar'">
+        <span class="nav-icon">🏭</span>机场管理
+      </div>
+      <div class="nav-item" :class="{active:page==='device'}" @click="page='device'">
+        <span class="nav-icon">🚁</span>设备管理
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">巡检作业</div>
+      <div class="nav-item" :class="{active:page==='task'}" @click="page='task'">
+        <span class="nav-icon">📋</span>巡检任务
+      </div>
+      <div class="nav-item" :class="{active:page==='route'}" @click="page='route'">
+        <span class="nav-icon">🗺️</span>航线规划
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">分析与报告</div>
+      <div class="nav-item" :class="{active:page==='issue'}" @click="page='issue'">
+        <span class="nav-icon">⚠️</span>问题管理
+        <span class="nav-badge">27</span>
+      </div>
+      <div class="nav-item" :class="{active:page==='report'}" @click="page='report'">
+        <span class="nav-icon">📄</span>巡检报告
+      </div>
+      <div class="nav-item" :class="{active:page==='data'}" @click="page='data'">
+        <span class="nav-icon">🗄️</span>数据管理
+      </div>
+    </div>
+
+    <div class="nav-bottom">
+      <div class="nav-item" :class="{active:page==='settings'}" @click="page='settings'">
+        <span class="nav-icon">⚙️</span>系统设置
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <span class="topbar-title">{{ pageTitle }}</span>
+      <div class="topbar-right">
+        <span class="sys-status"><span class="sys-dot"></span>系统运行正常</span>
+        <span class="topbar-time">{{ currentTime }}</span>
+        <span class="topbar-user">👤 管理员</span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ══════════ DASHBOARD ══════════ -->
+      <div v-if="page==='dashboard'">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">在线机场</div>
+            <div class="stat-value">3 <span class="stat-unit">/ 4</span></div>
+            <div class="stat-sub">1座维护中</div>
+            <div class="stat-bg-icon">🏭</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">在线无人机</div>
+            <div class="stat-value">8 <span class="stat-unit">/ 12</span></div>
+            <div class="stat-sub">较昨日 ↑ 2</div>
+            <div class="stat-bg-icon">🚁</div>
+          </div>
+          <div class="stat-card yellow">
+            <div class="stat-label">今日巡检任务</div>
+            <div class="stat-value">12</div>
+            <div class="stat-sub">8完成 · 3执行中 · 1待执行</div>
+            <div class="stat-bg-icon">📋</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">待处理缺陷</div>
+            <div class="stat-value">27</div>
+            <div class="stat-sub">4严重 · 11一般 · 12轻微</div>
+            <div class="stat-bg-icon">⚠️</div>
+          </div>
+        </div>
+
+        <div class="g2" style="margin-bottom:14px">
+          <!-- Chart -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">近7日巡检趋势</span>
+              <div style="display:flex;gap:14px;font-size:10px">
+                <span style="color:var(--primary)">● 任务数</span>
+                <span style="color:var(--warning)">- - 缺陷数</span>
+              </div>
+            </div>
+            <div class="card-body" style="padding:14px 16px">
+              <svg width="100%" height="130" viewBox="0 0 460 130" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="lg1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#0ea5e9" stop-opacity=".3"/>
+                    <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <line x1="0" y1="100" x2="460" y2="100" stroke="#1c2e44" stroke-width="1"/>
+                <line x1="0" y1="65" x2="460" y2="65" stroke="#1c2e44" stroke-width="1" stroke-dasharray="3 3"/>
+                <line x1="0" y1="30" x2="460" y2="30" stroke="#1c2e44" stroke-width="1" stroke-dasharray="3 3"/>
+                <!-- Fill area -->
+                <polygon points="10,95 75,78 150,58 220,68 295,42 375,32 450,48 450,100 10,100" fill="url(#lg1)"/>
+                <!-- Task line -->
+                <polyline points="10,95 75,78 150,58 220,68 295,42 375,32 450,48" fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- Defect line -->
+                <polyline points="10,88 75,98 150,90 220,102 295,82 375,92 450,85" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 3"/>
+                <!-- Dots -->
+                <circle cx="10" cy="95" r="3" fill="#0ea5e9"/>
+                <circle cx="75" cy="78" r="3" fill="#0ea5e9"/>
+                <circle cx="150" cy="58" r="3" fill="#0ea5e9"/>
+                <circle cx="220" cy="68" r="3" fill="#0ea5e9"/>
+                <circle cx="295" cy="42" r="3" fill="#0ea5e9"/>
+                <circle cx="375" cy="32" r="3" fill="#0ea5e9"/>
+                <circle cx="450" cy="48" r="3" fill="#0ea5e9"/>
+                <!-- X labels -->
+                <text x="10" y="118" fill="#475569" font-size="10" text-anchor="middle" font-family="Noto Sans SC">周一</text>
+                <text x="75" y="118" fill="#475569" font-size="10" text-anchor="middle" font-family="Noto Sans SC">周二</text>
+                <text x="150" y="118" fill="#475569" font-size="10" text-anchor="middle" font-family="Noto Sans SC">周三</text>
+                <text x="220" y="118" fill="#475569" font-size="10" text-anchor="middle" font-family="Noto Sans SC">周四</text>
+                <text x="295" y="118" fill="#475569" font-size="10" text-anchor="middle" font-family="Noto Sans SC">周五</text>
+                <text x="375" y="118" fill="#475569" font-size="10" text-anchor="middle" font-family="Noto Sans SC">周六</text>
+                <text x="450" y="118" fill="#475569" font-size="10" text-anchor="middle" font-family="Noto Sans SC">周日</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Drone Fleet -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">机队实时状态</span>
+              <button class="btn btn-ghost btn-sm" @click="page='device'">详情 →</button>
+            </div>
+            <div class="card-body" style="padding:12px 14px">
+              <div class="drone-status-grid">
+                <div class="drone-card-sm" v-for="d in droneFleet" :key="d.id">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                    <span style="font-size:11px;font-weight:700;color:var(--text-bright)">{{ d.name }}</span>
+                    <span class="badge" :class="d.bc">{{ d.status }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:5px">
+                    <span style="font-size:9px;color:var(--text-dim)">电量</span>
+                    <div class="progress" style="flex:1">
+                      <div class="progress-bar" :style="{width:d.bat+'%',background:d.bat<30?'var(--danger)':d.bat<60?'var(--warning)':'var(--success)'}"></div>
+                    </div>
+                    <span style="font-size:9px;font-family:var(--mono)">{{ d.bat }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Tasks -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">最近巡检任务</span>
+            <button class="btn btn-ghost btn-sm" @click="page='task'">查看全部 →</button>
+          </div>
+          <table>
+            <thead><tr>
+              <th>任务编号</th><th>线路名称</th><th>类型</th><th>无人机</th><th>状态</th><th>开始时间</th><th>完成度</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="t in recentTasks" :key="t.id">
+                <td class="td-primary">{{ t.id }}</td>
+                <td class="td-bold">{{ t.line }}</td>
+                <td>{{ t.type }}</td>
+                <td>{{ t.drone }}</td>
+                <td><span class="badge" :class="t.bc">{{ t.status }}</span></td>
+                <td class="td-mono">{{ t.time }}</td>
+                <td style="width:110px">
+                  <div style="display:flex;align-items:center;gap:5px">
+                    <div class="progress" style="flex:1"><div class="progress-bar" :style="{width:t.prog+'%',background:'var(--primary)'}"></div></div>
+                    <span style="font-size:9px;font-family:var(--mono)">{{ t.prog }}%</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Platform Overview Images -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-header"><span class="card-title">平台技术架构</span></div>
+          <div class="card-body" style="padding:14px">
+            <div class="g2">
+              <div class="doc-img-card">
+                <img class="doc-img" src="./assets/images/cloud-platform-overview.png" alt="大势低空云平台">
+                <div class="doc-img-label">大势低空云平台</div>
+              </div>
+              <div class="doc-img-card">
+                <img class="doc-img" src="./assets/images/platform-capabilities.png" alt="低空云平台基础能力">
+                <div class="doc-img-label">低空云平台基础能力</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ HANGAR ══════════ -->
+      <div v-if="page==='hangar'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="section-title">机场管理</div>
+          <button class="btn btn-primary" @click="showBindModal=true">🔗 绑定机场</button>
+        </div>
+        <div class="g3">
+          <div class="hangar-card" v-for="h in hangars" :key="h.id">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+              <div>
+                <div class="hangar-name">{{ h.name }}</div>
+                <div class="hangar-model">{{ h.model }}</div>
+              </div>
+              <span class="badge" :class="h.bc">{{ h.status }}</span>
+            </div>
+            <div class="hangar-metrics">
+              <div class="h-metric"><div class="h-metric-label">当前无人机</div><div class="h-metric-val">{{ h.drone }}</div></div>
+              <div class="h-metric"><div class="h-metric-label">机库温度</div><div class="h-metric-val">{{ h.temp }}℃</div></div>
+              <div class="h-metric"><div class="h-metric-label">供电电压</div><div class="h-metric-val">{{ h.volt }}V</div></div>
+              <div class="h-metric"><div class="h-metric-label">网络延迟</div><div class="h-metric-val">{{ h.lat }}ms</div></div>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">无人机电量</div>
+              <div class="progress">
+                <div class="progress-bar" :style="{width:h.droneBat+'%',background:h.droneBat>60?'var(--success)':h.droneBat>30?'var(--warning)':'var(--danger)'}"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:7px">
+              <button class="btn btn-ghost btn-sm" style="flex:1">详情</button>
+              <button class="btn btn-ghost btn-sm" style="flex:1" @click="showRemoteModal=true">远程控制</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Communication Network Architecture -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-header"><span class="card-title">通信网络架构</span></div>
+          <div style="padding:14px">
+            <div class="doc-img-card">
+              <img class="doc-img" src="./assets/images/hangar-mesh-network.png" alt="智能机场自组网技术">
+              <div class="doc-img-label">智能机场自组网技术 — 借助自组网技术支撑机巢覆盖范围拓展，解决信号传输距离限制问题</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data table -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-header"><span class="card-title">设备接入记录</span></div>
+          <table>
+            <thead><tr><th>设备名称</th><th>设备型号</th><th>固件版本</th><th>所属项目</th><th>加入时间</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="d in hangarDevices" :key="d.id">
+                <td class="td-bold">{{ d.name }}</td>
+                <td class="td-mono">{{ d.model }}</td>
+                <td class="td-mono" style="color:var(--text-dim)">{{ d.fw }}</td>
+                <td>{{ d.project }}</td>
+                <td class="td-mono" style="font-size:11px;color:var(--text-dim)">{{ d.joined }}</td>
+                <td><span class="badge" :class="d.bc">{{ d.status }}</span></td>
+                <td><button class="btn btn-ghost btn-sm">修改名称</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ DEVICE ══════════ -->
+      <div v-if="page==='device'">
+        <div class="tabs">
+          <div class="tab" :class="{active:devTab==='drone'}" @click="devTab='drone'">无人机设备</div>
+          <div class="tab" :class="{active:devTab==='hangar'}" @click="devTab='hangar'">机库设备</div>
+        </div>
+        <div class="filter-bar">
+          <select class="form-input" style="width:120px"><option>全部状态</option><option>在线</option><option>飞行中</option><option>充电中</option><option>离线</option></select>
+          <select class="form-input" style="width:130px"><option>全部机场</option><option>机场1-鄂州</option><option>机场2-荆门</option><option>机场3-武汉</option></select>
+          <input class="form-input" placeholder="搜索设备名称..." style="width:180px">
+          <button class="btn btn-primary" style="margin-left:auto">+ 新增设备</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr>
+              <th>设备名称</th><th>型号</th><th>所属机场</th><th>状态</th><th>电量</th><th>累计飞行</th><th>维护到期</th><th>最后在线</th><th>操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="d in devices" :key="d.id">
+                <td class="td-bold">{{ d.name }}</td>
+                <td class="td-mono">{{ d.model }}</td>
+                <td>{{ d.hangar }}</td>
+                <td><span class="badge" :class="d.bc">{{ d.status }}</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:5px;width:80px">
+                    <div class="progress" style="flex:1"><div class="progress-bar" :style="{width:d.bat+'%',background:d.bat<30?'var(--danger)':d.bat<60?'var(--warning)':'var(--success)'}"></div></div>
+                    <span style="font-size:9px;font-family:var(--mono)">{{ d.bat }}%</span>
+                  </div>
+                </td>
+                <td class="td-mono">{{ d.hours }}h</td>
+                <td style="font-size:11px" :style="{color:d.maint?'var(--warning)':'var(--text-dim)'}">{{ d.maintDate }}</td>
+                <td style="font-size:11px;color:var(--text-dim)">{{ d.lastOn }}</td>
+                <td style="white-space:nowrap">
+                  <button class="btn btn-ghost btn-sm" @click="showRemoteModal=true">远程控制</button>
+                  <button class="btn btn-ghost btn-sm" style="margin-left:4px">升级</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ TASK ══════════ -->
+      <div v-if="page==='task'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="section-title">巡检任务管理</div>
+          <button class="btn btn-primary" @click="showTaskModal=true">＋ 新建任务</button>
+        </div>
+        <div class="filter-bar">
+          <select class="form-input" style="width:120px"><option>全部状态</option><option>待执行</option><option>执行中</option><option>已完成</option><option>异常</option></select>
+          <select class="form-input" style="width:155px"><option>全部线路</option><option>500kV 鄂荆线</option><option>220kV 武阳线</option><option>110kV 江汉线</option></select>
+          <select class="form-input" style="width:140px"><option>全部任务类型</option><option>杆塔精细化</option><option>通道巡检</option><option>变电站巡检</option></select>
+          <input type="date" class="form-input" style="width:140px">
+          <button class="btn btn-primary">🔍 搜索</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr>
+              <th>任务编号</th><th>任务名称</th><th>线路</th><th>类型</th><th>执行无人机</th><th>状态</th><th>进度</th><th>计划时间</th><th>操作</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="t in tasks" :key="t.id">
+                <td class="td-primary">{{ t.id }}</td>
+                <td class="td-bold">{{ t.name }}</td>
+                <td>{{ t.line }}</td>
+                <td>{{ t.type }}</td>
+                <td class="td-mono">{{ t.drone }}</td>
+                <td><span class="badge" :class="t.bc">{{ t.status }}</span></td>
+                <td style="width:100px">
+                  <div style="display:flex;align-items:center;gap:5px">
+                    <div class="progress" style="flex:1"><div class="progress-bar" :style="{width:t.prog+'%'}"></div></div>
+                    <span style="font-size:9px;font-family:var(--mono)">{{ t.prog }}%</span>
+                  </div>
+                </td>
+                <td style="font-size:11px;color:var(--text-dim)">{{ t.time }}</td>
+                <td style="white-space:nowrap">
+                  <button class="btn btn-ghost btn-sm">详情</button>
+                  <button v-if="t.status==='执行中'" class="btn btn-danger btn-sm" style="margin-left:4px">终止</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ ROUTE ══════════ -->
+      <div v-if="page==='route'">
+        <div style="display:flex;gap:14px;height:calc(100vh - 130px)">
+          <!-- Left panel -->
+          <div style="width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:12px">
+            <div class="section-title">航线类型</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <div v-for="rt in routeTypes" :key="rt.key"
+                   @click="activeRType=rt.key"
+                   style="padding:9px;border-radius:6px;cursor:pointer;text-align:center;transition:all .15s;border:1px solid"
+                   :style="{background:activeRType===rt.key?'var(--primary-dim)':'var(--bg3)',borderColor:activeRType===rt.key?'var(--primary)':'var(--border)',color:activeRType===rt.key?'var(--primary)':'var(--text-dim)'}">
+                <div style="font-size:18px;margin-bottom:3px">{{ rt.icon }}</div>
+                <div style="font-size:10px;font-weight:600">{{ rt.name }}</div>
+              </div>
+            </div>
+            <div class="section-title">航线列表</div>
+            <div class="route-list-wrap">
+              <div class="route-item" v-for="r in routes" :key="r.id" :class="{active:activeRoute===r.id}" @click="activeRoute=r.id">
+                <div class="route-item-name">{{ r.name }}</div>
+                <div class="route-item-meta">{{ r.pts }}个航点 · {{ r.dist }}km · {{ r.mins }}分钟</div>
+                <div style="margin-top:4px"><span class="badge b-info" style="font-size:9px">{{ r.type }}</span></div>
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%">＋ 新建航线</button>
+          </div>
+
+          <!-- Map -->
+          <div class="map-wrap" style="flex:1">
+            <div class="map-grid-lines"></div>
+            <div class="map-vignette"></div>
+            <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 800 560" preserveAspectRatio="xMidYMid slice">
+              <!-- Terrain patches -->
+              <rect x="30" y="60" width="220" height="130" rx="5" fill="#0a2218" opacity=".65"/>
+              <rect x="270" y="30" width="170" height="100" rx="5" fill="#18180a" opacity=".55"/>
+              <rect x="490" y="80" width="240" height="150" rx="5" fill="#0a1828" opacity=".65"/>
+              <rect x="80" y="270" width="190" height="110" rx="5" fill="#180a0a" opacity=".5"/>
+              <rect x="330" y="240" width="280" height="130" rx="5" fill="#0a1e0a" opacity=".55"/>
+              <rect x="610" y="320" width="170" height="130" rx="5" fill="#0a180a" opacity=".5"/>
+              <rect x="140" y="420" width="300" height="110" rx="5" fill="#141428" opacity=".5"/>
+              <!-- Route dashes -->
+              <polyline points="90,490 175,400 275,340 375,275 458,210 558,148 658,108 720,88"
+                fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-dasharray="8 4" stroke-linecap="round"/>
+              <!-- Coverage circle -->
+              <circle cx="375" cy="275" r="55" fill="none" stroke="#10b981" stroke-width="1" stroke-dasharray="4 3" opacity=".5"/>
+              <!-- Waypoints -->
+              <circle cx="175" cy="400" r="7" fill="#0ea5e9" opacity=".9"/>
+              <circle cx="275" cy="340" r="7" fill="#0ea5e9" opacity=".9"/>
+              <circle cx="375" cy="275" r="8" fill="#0ea5e9"/>
+              <circle cx="458" cy="210" r="7" fill="#0ea5e9" opacity=".9"/>
+              <circle cx="558" cy="148" r="7" fill="#0ea5e9" opacity=".9"/>
+              <circle cx="658" cy="108" r="7" fill="#0ea5e9" opacity=".9"/>
+              <!-- Start / End -->
+              <circle cx="90" cy="490" r="11" fill="none" stroke="#10b981" stroke-width="2.5"/>
+              <text x="90" y="494" fill="#10b981" font-size="11" text-anchor="middle" font-weight="bold">S</text>
+              <circle cx="720" cy="88" r="11" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+              <text x="720" y="92" fill="#f59e0b" font-size="11" text-anchor="middle" font-weight="bold">E</text>
+              <!-- WP labels -->
+              <text x="185" y="393" fill="#0ea5e9" font-size="9" font-family="monospace">WP1</text>
+              <text x="285" y="333" fill="#0ea5e9" font-size="9" font-family="monospace">WP2</text>
+              <text x="385" y="268" fill="#0ea5e9" font-size="9" font-family="monospace">WP3</text>
+              <text x="468" y="203" fill="#0ea5e9" font-size="9" font-family="monospace">WP4</text>
+              <text x="568" y="141" fill="#0ea5e9" font-size="9" font-family="monospace">WP5</text>
+              <text x="668" y="101" fill="#0ea5e9" font-size="9" font-family="monospace">WP6</text>
+              <!-- Tower icons -->
+              <text x="375" y="265" fill="#f59e0b" font-size="14" text-anchor="middle">⚡</text>
+            </svg>
+            <div class="map-controls">
+              <button class="btn btn-ghost btn-sm">2D</button>
+              <button class="btn btn-primary btn-sm">3D</button>
+              <button class="btn btn-ghost btn-sm" style="font-size:14px;padding:4px 9px">＋</button>
+              <button class="btn btn-ghost btn-sm" style="font-size:14px;padding:4px 9px">－</button>
+            </div>
+            <div class="map-info">
+              <div style="color:var(--primary);font-family:var(--mono);margin-bottom:3px;font-size:11px">{{ routes[activeRoute-1]?.name }}</div>
+              <div style="color:var(--text-dim);font-size:10px">
+                航点数: {{ routes[activeRoute-1]?.pts }} &nbsp;|&nbsp;
+                总距离: {{ routes[activeRoute-1]?.dist }}km &nbsp;|&nbsp;
+                预计时长: {{ routes[activeRoute-1]?.mins }}分钟
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Route Planning Reference Images -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-header"><span class="card-title">航线规划参考</span></div>
+          <div class="card-body" style="padding:14px">
+            <div class="g3">
+              <div class="doc-img-card">
+                <img class="doc-img" src="./assets/images/route-management.png" alt="航线管理">
+                <div class="doc-img-label">航线管理</div>
+              </div>
+              <div class="doc-img-card">
+                <img class="doc-img" src="./assets/images/route-waypoint-planning.png" alt="航点模式智能规划巡检航线">
+                <div class="doc-img-label">航点模式智能规划巡检航线</div>
+              </div>
+              <div class="doc-img-card">
+                <img class="doc-img" src="./assets/images/tower-inspection-paths.png" alt="各类输电杆塔无人机巡检路径规划">
+                <div class="doc-img-label">各类输电杆塔无人机巡检路径规划</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ ISSUE ══════════ -->
+      <div v-if="page==='issue'">
+        <div class="tabs">
+          <div class="tab" :class="{active:issTab==='ai'}" @click="issTab='ai'">
+            AI智能识别 <span class="badge b-danger" style="margin-left:5px">18</span>
+          </div>
+          <div class="tab" :class="{active:issTab==='manual'}" @click="issTab='manual'">
+            人工判读 <span class="badge b-warning" style="margin-left:5px">9</span>
+          </div>
+          <div class="tab" :class="{active:issTab==='compare'}" @click="issTab='compare'">多期对比分析</div>
+        </div>
+
+        <div v-if="issTab!=='compare'">
+          <!-- AI Algorithm Reference (shown only on AI tab) -->
+          <div v-if="issTab==='ai'" class="card" style="margin-bottom:14px">
+            <div class="card-header"><span class="card-title">AI 缺陷识别算法支持</span></div>
+            <div class="card-body" style="padding:12px">
+              <div class="g2">
+                <div class="doc-img-card">
+                  <img class="doc-img-cover" src="./assets/images/defect-ai-algorithms.png" alt="多种缺陷智能识别算法支持">
+                  <div class="doc-img-label">多种缺陷智能识别算法支持（10种器件 · 5种缺陷 · 识别率80%+）</div>
+                </div>
+                <div class="doc-img-card">
+                  <img class="doc-img-cover" src="./assets/images/defect-component-detail.png" alt="部件细节内容的缺陷识别">
+                  <div class="doc-img-label">部件细节内容的缺陷识别</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <select class="form-input" style="width:110px"><option>全部等级</option><option>严重</option><option>一般</option><option>轻微</option></select>
+            <select class="form-input" style="width:155px"><option>全部缺陷类型</option><option>绝缘子破损</option><option>导线磨损</option><option>设备发热</option><option>杆塔异物</option></select>
+            <select class="form-input" style="width:125px"><option>全部状态</option><option>待处理</option><option>处理中</option><option>已处理</option></select>
+            <button class="btn btn-primary">🔍 筛选</button>
+            <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">共 {{ defects.length }} 条记录</span>
+          </div>
+          <div class="defect-grid">
+            <div class="defect-card" v-for="d in defects" :key="d.id" @click="selDefect=d;showDefModal=true">
+              <div class="defect-thumb">
+                <span>{{ d.icon }}</span>
+                <div style="position:absolute;top:8px;right:8px"><span class="badge" :class="d.lc">{{ d.level }}</span></div>
+                <div style="position:absolute;bottom:7px;left:9px;font-size:9px;color:#475569;font-family:var(--mono)">
+                  AI置信度: {{ d.conf }}%
+                </div>
+              </div>
+              <div class="defect-body">
+                <div class="defect-type">{{ d.type }}</div>
+                <div class="defect-loc">{{ d.loc }} · {{ d.date }}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px">
+                  <span class="badge" :class="d.sc">{{ d.status }}</span>
+                  <button class="btn btn-ghost btn-sm">处理 →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else>
+          <div class="alert-info-box">ℹ️ 多期对比分析：选择同一巡检区域的不同时间段数据，识别设备变化趋势与潜在隐患。</div>
+          <div class="g2">
+            <div class="card">
+              <div class="card-header"><span class="card-title">期次一：2024-03-15</span></div>
+              <div style="height:200px;background:linear-gradient(135deg,#0c1a2e,#1a2a44);display:flex;align-items:center;justify-content:center;font-size:36px">🗺️</div>
+              <div style="padding:12px 14px;font-size:11px;color:var(--text-dim)">500kV鄂荆线 #23塔 · 发现缺陷 2处</div>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">期次二：2024-04-28</span></div>
+              <div style="height:200px;background:linear-gradient(135deg,#0c1a2e,#1a2a44);display:flex;align-items:center;justify-content:center;font-size:36px">🗺️</div>
+              <div style="padding:12px 14px;font-size:11px;color:var(--text-dim)">500kV鄂荆线 #23塔 · 发现缺陷 5处 ↑ 加剧</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card-header"><span class="card-title">变化趋势分析</span></div>
+            <div style="padding:14px;font-size:12px;color:var(--text-dim)">
+              <div style="padding:10px;background:var(--bg2);border-radius:6px;border-left:3px solid var(--danger);margin-bottom:8px">
+                ⚠️ <strong style="color:var(--text-bright)">绝缘子破损</strong> — 破损程度较上期加重约 30%，建议立即安排处理。
+              </div>
+              <div style="padding:10px;background:var(--bg2);border-radius:6px;border-left:3px solid var(--warning)">
+                📌 <strong style="color:var(--text-bright)">导线磨损</strong> — 磨损面积扩大，需关注后续变化趋势。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ REPORT ══════════ -->
+      <div v-if="page==='report'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="section-title">巡检报告管理</div>
+          <button class="btn btn-primary" @click="showReportModal=true">📄 生成报告</button>
+        </div>
+        <div class="stat-grid" style="margin-bottom:16px">
+          <div class="stat-card"><div class="stat-label">报告总数</div><div class="stat-value">156</div><div class="stat-sub">累计生成</div></div>
+          <div class="stat-card green"><div class="stat-label">本月报告</div><div class="stat-value">23</div><div class="stat-sub">较上月 +3</div></div>
+          <div class="stat-card yellow"><div class="stat-label">待审核</div><div class="stat-value">4</div><div class="stat-sub">需要人工确认</div></div>
+          <div class="stat-card"><div class="stat-label">AI自动生成率</div><div class="stat-value">91<span class="stat-unit">%</span></div><div class="stat-sub">落地即出报告</div></div>
+        </div>
+        <div v-for="r in reportList" :key="r.id" class="report-row" @click="showRptDetail=true">
+          <div class="report-icon-box">📄</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--text-bright);margin-bottom:2px">{{ r.name }}</div>
+            <div style="font-size:10px;color:var(--text-dim)">{{ r.line }} · {{ r.date }} · 发现缺陷 {{ r.defs }} 处</div>
+          </div>
+          <span class="badge" :class="r.bc">{{ r.status }}</span>
+          <button class="btn btn-ghost btn-sm">📥 下载</button>
+          <button class="btn btn-ghost btn-sm">👁 预览</button>
+        </div>
+
+        <!-- Report Template Example -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-header">
+            <span class="card-title">巡检报告模板（示例）</span>
+            <span style="font-size:10px;color:var(--text-dim)">支持 PDF / Word 格式导出</span>
+          </div>
+          <div style="padding:14px">
+            <div class="doc-img-card">
+              <img class="doc-img" src="./assets/images/report-template-example.png" alt="巡检报告模板示例">
+              <div class="doc-img-label">巡检报告涵盖：巡检任务详情 · 缺陷统计 · 分析结果 · 处理建议</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ DATA ══════════ -->
+      <div v-if="page==='data'">
+        <div class="section-title">数据资产管理</div>
+        <div class="stat-grid" style="margin-bottom:16px">
+          <div class="stat-card"><div class="stat-label">图像数据</div><div class="stat-value">48,291</div><div class="stat-sub">共 2.3 TB</div></div>
+          <div class="stat-card green"><div class="stat-label">视频数据</div><div class="stat-value">1,847</div><div class="stat-sub">共 4.1 TB</div></div>
+          <div class="stat-card yellow"><div class="stat-label">点云数据</div><div class="stat-value">326</div><div class="stat-sub">共 1.8 TB</div></div>
+          <div class="stat-card"><div class="stat-label">缺陷标注记录</div><div class="stat-value">3,204</div><div class="stat-sub">已标注 2,891</div></div>
+        </div>
+        <div class="filter-bar">
+          <select class="form-input" style="width:110px"><option>全部类型</option><option>图像</option><option>视频</option><option>点云</option></select>
+          <select class="form-input" style="width:155px"><option>全部线路</option><option>500kV 鄂荆线</option><option>220kV 武阳线</option></select>
+          <input type="date" class="form-input" style="width:140px">
+          <button class="btn btn-primary">🔍 搜索</button>
+          <button class="btn btn-ghost" style="margin-left:auto">📥 批量下载</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr><th>文件名</th><th>类型</th><th>所属任务</th><th>线路/杆塔</th><th>大小</th><th>采集时间</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="f in dataFiles" :key="f.id">
+                <td style="color:var(--primary);font-size:11px;font-family:var(--mono)">{{ f.name }}</td>
+                <td><span class="badge b-info">{{ f.type }}</span></td>
+                <td class="td-mono">{{ f.task }}</td>
+                <td>{{ f.loc }}</td>
+                <td class="td-mono">{{ f.size }}</td>
+                <td style="font-size:11px;color:var(--text-dim)">{{ f.date }}</td>
+                <td><button class="btn btn-ghost btn-sm">预览</button> <button class="btn btn-ghost btn-sm">下载</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ SETTINGS ══════════ -->
+      <div v-if="page==='settings'">
+        <div class="section-title">系统设置</div>
+        <div class="g2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">AI识别参数</span></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">置信度阈值</label>
+                <input class="form-input" type="number" value="0.75" step="0.05" min="0" max="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label">预警时间间隔（秒）</label>
+                <input class="form-input" type="number" value="30">
+              </div>
+              <div class="form-group">
+                <label class="form-label">识别目标类别</label>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+                  <span v-for="c in aiClasses" :key="c" class="badge b-info" style="cursor:pointer;padding:4px 10px">{{ c }} ✕</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">最低报警等级</label>
+                <select class="form-input"><option>全部（含轻微）</option><option selected>一般及以上</option><option>仅严重</option></select>
+              </div>
+              <button class="btn btn-primary">✓ 保存配置</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">通知设置</span></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">接收邮箱</label>
+                <input class="form-input" value="admin@powergroup.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label">短信通知手机</label>
+                <input class="form-input" value="138****8888">
+              </div>
+              <div class="form-group">
+                <label class="form-label">报告自动生成</label>
+                <select class="form-input"><option>任务完成后自动生成</option><option>手动生成</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">数据保留周期</label>
+                <select class="form-input"><option>90天</option><option>180天</option><option selected>365天</option><option>永久保留</option></select>
+              </div>
+              <button class="btn btn-primary">✓ 保存设置</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+
+<!-- ════════════ MODALS ════════════ -->
+
+<!-- Bind Hangar -->
+<div class="overlay" v-if="showBindModal" @click.self="showBindModal=false">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🔗 绑定机场</span>
+      <button class="modal-close" @click="showBindModal=false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert-info-box">请在 Pilot2 云服务配置界面输入以下注册信息以完成机场绑定。</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">MQTT 网关地址</label><input class="form-input" value="mqtt://192.168.1.100:1883" readonly></div>
+        <div class="form-group"><label class="form-label">MQTT 账号</label><input class="form-input" value="dock_user_001" readonly></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">MQTT 密码</label><input class="form-input" value="••••••••" type="password" readonly></div>
+        <div class="form-group"><label class="form-label">组织 ID</label><input class="form-input" value="ORG-2024-PG-001" readonly></div>
+      </div>
+      <div class="form-group"><label class="form-label">设备绑定码</label><input class="form-input" value="BIND-7X9K-2M4P" readonly></div>
+      <div style="margin-top:14px">
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:7px">接入流程参考</div>
+        <div class="doc-img-card">
+          <img class="doc-img" src="./assets/images/hangar-access-flow.png" alt="接入流程">
+          <div class="doc-img-label">平台接入流程</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" @click="showBindModal=false">取消</button>
+      <button class="btn btn-primary">📋 一键复制</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Task -->
+<div class="overlay" v-if="showTaskModal" @click.self="showTaskModal=false">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title">＋ 新建巡检任务</span>
+      <button class="modal-close" @click="showTaskModal=false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">任务名称</label><input class="form-input" placeholder="请输入任务名称"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">巡检线路</label>
+          <select class="form-input"><option>请选择线路</option><option>500kV 鄂荆线</option><option>220kV 武阳线</option><option>110kV 江汉线</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">任务类型</label>
+          <select class="form-input"><option>杆塔精细化巡检</option><option>通道巡检</option><option>变电站巡检</option><option>应急巡查</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">选择航线</label>
+          <select class="form-input"><option>请选择航线</option><option>鄂荆线1#-50#精细航线</option><option>武阳线通道航线</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">分配无人机</label>
+          <select class="form-input"><option>系统自动分配</option><option>M300-RTK #1</option><option>M300-RTK #2</option><option>M4D #3</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">计划执行时间</label><input class="form-input" type="datetime-local"></div>
+        <div class="form-group">
+          <label class="form-label">优先级</label>
+          <select class="form-input"><option>普通</option><option>高优先级</option><option>紧急</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">任务备注（可选）</label><textarea class="form-input" rows="2" placeholder="任务特殊要求或注意事项..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" @click="showTaskModal=false">取消</button>
+      <button class="btn btn-primary" @click="showTaskModal=false">✓ 创建任务</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remote Control -->
+<div class="overlay" v-if="showRemoteModal" @click.self="showRemoteModal=false">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🎮 远程控制 — M300-RTK #1</span>
+      <button class="modal-close" @click="showRemoteModal=false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg2);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px;display:flex;gap:20px">
+        <span>状态: <strong style="color:var(--success)">飞行中</strong></span>
+        <span>电量: <strong style="color:var(--primary);font-family:var(--mono)">78%</strong></span>
+        <span>高度: <strong style="color:var(--primary);font-family:var(--mono)">120m</strong></span>
+        <span>速度: <strong style="color:var(--primary);font-family:var(--mono)">8m/s</strong></span>
+      </div>
+      <div class="remote-grid">
+        <div class="remote-btn" v-for="c in remCtrl" :key="c.label" :class="{active:c.on}" @click="c.on=!c.on">
+          <div class="remote-btn-icon">{{ c.icon }}</div>
+          <div class="remote-btn-label">{{ c.label }}</div>
+          <div class="remote-btn-desc">{{ c.desc }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger">⏹ 紧急返航</button>
+      <button class="btn btn-ghost" @click="showRemoteModal=false">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Defect Detail -->
+<div class="overlay" v-if="showDefModal && selDefect" @click.self="showDefModal=false">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title">⚠️ 缺陷详情</span>
+      <button class="modal-close" @click="showDefModal=false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:linear-gradient(135deg,#0c1a2e,#1a2a44);border-radius:7px;height:150px;display:flex;align-items:center;justify-content:center;font-size:52px;margin-bottom:16px">
+        {{ selDefect.icon }}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div><div class="form-label">缺陷类型</div><div style="font-weight:700;color:var(--text-bright)">{{ selDefect.type }}</div></div>
+        <div><div class="form-label">严重程度</div><span class="badge" :class="selDefect.lc">{{ selDefect.level }}</span></div>
+        <div><div class="form-label">AI置信度</div><div style="color:var(--primary);font-family:var(--mono)">{{ selDefect.conf }}%</div></div>
+        <div><div class="form-label">发现位置</div><div>{{ selDefect.loc }}</div></div>
+        <div><div class="form-label">发现时间</div><div style="font-size:11px;color:var(--text-dim)">{{ selDefect.date }}</div></div>
+        <div><div class="form-label">当前状态</div><span class="badge" :class="selDefect.sc">{{ selDefect.status }}</span></div>
+      </div>
+      <div style="background:var(--bg2);border-radius:6px;padding:12px;margin-top:14px;font-size:11px;color:var(--text-dim);border-left:3px solid var(--primary)">
+        <strong style="color:var(--text-bright)">处理建议：</strong>该缺陷需安排专业人员现场核查，根据实际情况制定维修方案，建议在下次巡检前完成处理。
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" @click="showDefModal=false">关闭</button>
+      <button class="btn btn-success">✓ 生成问题记录单</button>
+      <button class="btn btn-primary">📋 纳入维修计划</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Report -->
+<div class="overlay" v-if="showReportModal" @click.self="showReportModal=false">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📄 生成巡检报告</span>
+      <button class="modal-close" @click="showReportModal=false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">关联巡检任务</label>
+        <select class="form-input"><option>TASK-20240428-001 · 鄂荆线精细巡检</option><option>TASK-20240427-003 · 武阳线通道巡检</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">报告模板</label>
+        <select class="form-input"><option>标准巡检报告模板</option><option>精细化巡检报告模板</option><option>变电站专项报告模板</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">导出格式</label>
+        <div style="display:flex;gap:14px;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px"><input type="checkbox" checked> PDF</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px"><input type="checkbox" checked> Word</label>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px"><input type="checkbox"> Excel</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" @click="showReportModal=false">取消</button>
+      <button class="btn btn-primary" @click="showReportModal=false">🚀 立即生成</button>
+    </div>
+  </div>
+</div>
+
+<!-- Report Detail -->
+<div class="overlay" v-if="showRptDetail" @click.self="showRptDetail=false">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title">📄 500kV鄂荆线精细化巡检报告 · 2024-04</span>
+      <button class="modal-close" @click="showRptDetail=false">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:var(--bg2);padding:10px 12px;border-radius:6px"><div class="form-label">线路名称</div><div style="font-weight:700;color:var(--text-bright)">500kV 鄂荆线</div></div>
+        <div style="background:var(--bg2);padding:10px 12px;border-radius:6px"><div class="form-label">巡检范围</div><div style="color:var(--text-bright)">1# — 50# 杆塔</div></div>
+        <div style="background:var(--bg2);padding:10px 12px;border-radius:6px"><div class="form-label">巡检日期</div><div style="color:var(--text-bright)">2024-04-28</div></div>
+        <div style="background:var(--bg2);padding:10px 12px;border-radius:6px"><div class="form-label">执行无人机</div><div style="font-family:var(--mono);color:var(--primary)">M300-RTK #1</div></div>
+        <div style="background:var(--bg2);padding:10px 12px;border-radius:6px"><div class="form-label">飞行时间</div><div style="font-family:var(--mono);color:var(--text-bright)">1h 23min</div></div>
+        <div style="background:var(--bg2);padding:10px 12px;border-radius:6px"><div class="form-label">采集照片</div><div style="font-family:var(--mono);color:var(--text-bright)">1,248 张</div></div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-bright);margin-bottom:10px">缺陷统计</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+        <div style="background:#ef444415;border:1px solid #ef444430;border-radius:6px;padding:10px;text-align:center"><div style="font-size:20px;font-family:var(--mono);color:var(--danger);font-weight:700">2</div><div style="font-size:10px;color:var(--danger)">严重缺陷</div></div>
+        <div style="background:#f59e0b15;border:1px solid #f59e0b30;border-radius:6px;padding:10px;text-align:center"><div style="font-size:20px;font-family:var(--mono);color:var(--warning);font-weight:700">3</div><div style="font-size:10px;color:var(--warning)">一般缺陷</div></div>
+        <div style="background:#0ea5e915;border:1px solid #0ea5e930;border-radius:6px;padding:10px;text-align:center"><div style="font-size:20px;font-family:var(--mono);color:var(--primary);font-weight:700">2</div><div style="font-size:10px;color:var(--primary)">轻微缺陷</div></div>
+      </div>
+      <div style="background:var(--bg2);border-radius:6px;padding:12px;font-size:11px;color:var(--text-dim)">
+        <strong style="color:var(--text-bright);display:block;margin-bottom:6px">处理建议</strong>
+        · #23塔绝缘子破损（严重）：建议停电检修，7日内完成更换。<br>
+        · #31塔设备发热（严重）：需联系厂家进行故障诊断，排查发热原因。<br>
+        · 其余缺陷纳入常规维修计划，下次巡检前完成处理。
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" @click="showRptDetail=false">关闭</button>
+      <button class="btn btn-ghost">📥 下载 Word</button>
+      <button class="btn btn-primary">📥 下载 PDF</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+const { createApp, ref, computed, reactive, onMounted } = Vue;
+createApp({
+  setup() {
+    const page = ref('dashboard');
+    const devTab = ref('drone');
+    const issTab = ref('ai');
+    const activeRType = ref('waypoint');
+    const activeRoute = ref(1);
+    const showBindModal = ref(false);
+    const showTaskModal = ref(false);
+    const showRemoteModal = ref(false);
+    const showDefModal = ref(false);
+    const showReportModal = ref(false);
+    const showRptDetail = ref(false);
+    const selDefect = ref(null);
+    const currentTime = ref('');
+
+    const pageTitle = computed(() => ({
+      dashboard:'首页总览', hangar:'机场管理', device:'设备管理',
+      task:'巡检任务', route:'航线规划', issue:'问题管理',
+      report:'巡检报告', data:'数据管理', settings:'系统设置'
+    }[page.value] || ''));
+
+    onMounted(() => {
+      const tick = () => { currentTime.value = new Date().toLocaleString('zh-CN',{hour12:false}); };
+      tick(); setInterval(tick, 1000);
+    });
+
+    const droneFleet = [
+      {id:1,name:'M300-RTK #1',status:'飞行中',bc:'b-success',bat:78},
+      {id:2,name:'M300-RTK #2',status:'充电中',bc:'b-info',bat:43},
+      {id:3,name:'M4D #3',status:'在线',bc:'b-success',bat:91},
+      {id:4,name:'M4D #4',status:'离线',bc:'b-gray',bat:0},
+      {id:5,name:'M4TD #5',status:'飞行中',bc:'b-success',bat:55},
+      {id:6,name:'M4TD #6',status:'维护中',bc:'b-warning',bat:22},
+    ];
+
+    const recentTasks = [
+      {id:'TASK-240428-001',line:'500kV 鄂荆线',type:'杆塔精细化',drone:'M300-RTK #1',status:'执行中',bc:'b-info',time:'04-28 09:15',prog:67},
+      {id:'TASK-240428-002',line:'220kV 武阳线',type:'通道巡检',drone:'M4D #3',status:'已完成',bc:'b-success',time:'04-28 07:30',prog:100},
+      {id:'TASK-240427-003',line:'110kV 江汉线',type:'精细化巡检',drone:'M4TD #5',status:'已完成',bc:'b-success',time:'04-27 14:00',prog:100},
+      {id:'TASK-240427-004',line:'500kV 鄂荆线',type:'应急巡查',drone:'M300-RTK #2',status:'异常',bc:'b-danger',time:'04-27 11:30',prog:35},
+      {id:'TASK-240428-005',line:'220kV 武阳线',type:'通道巡检',drone:'自动分配',status:'待执行',bc:'b-gray',time:'04-28 14:00',prog:0},
+    ];
+
+    const hangars = [
+      {id:1,name:'机场1 (鄂州变电站)',model:'DOCK2',status:'在线',bc:'b-success',drone:'M300-RTK',temp:24.2,volt:47.54,lat:16,droneBat:78},
+      {id:2,name:'机场2 (荆门输电所)',model:'DOCK2',status:'在线',bc:'b-success',drone:'M4D',temp:26.8,volt:48.10,lat:22,droneBat:91},
+      {id:3,name:'机场3 (武汉转运站)',model:'DOCK3',status:'维护中',bc:'b-warning',drone:'M4TD',temp:25.4,volt:46.9,lat:'-',droneBat:22},
+    ];
+
+    const hangarDevices = [
+      {id:1,name:'机场1',model:'DOCK2',fw:'01.03.2004',project:'我的项目',joined:'2025-03-30 02:27',status:'在线',bc:'b-success'},
+      {id:2,name:'机场1-M3D',model:'M3D',fw:'01.03.2005',project:'我的项目',joined:'2025-03-30 02:26',status:'在线',bc:'b-success'},
+      {id:3,name:'机场2',model:'DOCK2',fw:'01.03.2005',project:'我的项目',joined:'2025-03-31 15:52',status:'在线',bc:'b-success'},
+      {id:4,name:'机场3',model:'DOCK3',fw:'01.00.0002',project:'—',joined:'2025-04-28 14:05',status:'维护中',bc:'b-warning'},
+    ];
+
+    const devices = [
+      {id:1,name:'M300-RTK #1',model:'M300 RTK',hangar:'机场1',status:'飞行中',bc:'b-success',bat:78,hours:342,maintDate:'2024-06-15',maint:false,lastOn:'04-28 09:15'},
+      {id:2,name:'M300-RTK #2',model:'M300 RTK',hangar:'机场1',status:'充电中',bc:'b-info',bat:43,hours:289,maintDate:'2024-05-10',maint:true,lastOn:'04-28 08:30'},
+      {id:3,name:'M4D #3',model:'M4D',hangar:'机场2',status:'在线',bc:'b-success',bat:91,hours:178,maintDate:'2024-07-20',maint:false,lastOn:'04-28 10:02'},
+      {id:4,name:'M4D #4',model:'M4D',hangar:'机场2',status:'离线',bc:'b-gray',bat:0,hours:201,maintDate:'2024-06-01',maint:false,lastOn:'04-26 16:45'},
+      {id:5,name:'M4TD #5',model:'M4TD',hangar:'机场3',status:'飞行中',bc:'b-success',bat:55,hours:145,maintDate:'2024-08-05',maint:false,lastOn:'04-28 09:50'},
+      {id:6,name:'M4TD #6',model:'M4TD',hangar:'机场3',status:'维护中',bc:'b-warning',bat:22,hours:312,maintDate:'2024-04-30',maint:true,lastOn:'04-25 11:00'},
+    ];
+
+    const tasks = [
+      {id:'TASK-240428-001',name:'鄂荆线1#-50#精细巡检',line:'500kV 鄂荆线',type:'杆塔精细化',drone:'M300-RTK #1',status:'执行中',bc:'b-info',prog:67,time:'2024-04-28 09:15'},
+      {id:'TASK-240428-002',name:'武阳线通道巡检（北段）',line:'220kV 武阳线',type:'通道巡检',drone:'M4D #3',status:'已完成',bc:'b-success',prog:100,time:'2024-04-28 07:30'},
+      {id:'TASK-240427-003',name:'江汉线精细化巡检',line:'110kV 江汉线',type:'精细化巡检',drone:'M4TD #5',status:'已完成',bc:'b-success',prog:100,time:'2024-04-27 14:00'},
+      {id:'TASK-240427-004',name:'鄂荆线应急巡查',line:'500kV 鄂荆线',type:'应急巡查',drone:'M300-RTK #2',status:'异常',bc:'b-danger',prog:35,time:'2024-04-27 11:30'},
+      {id:'TASK-240428-005',name:'武阳线通道巡检（南段）',line:'220kV 武阳线',type:'通道巡检',drone:'自动分配',status:'待执行',bc:'b-gray',prog:0,time:'2024-04-28 14:00'},
+      {id:'TASK-240429-006',name:'鄂荆线变电站巡检',line:'500kV 鄂荆线',type:'变电站巡检',drone:'自动分配',status:'待执行',bc:'b-gray',prog:0,time:'2024-04-29 08:00'},
+    ];
+
+    const routeTypes = [
+      {key:'ortho',name:'正射航线',icon:'🛩️'},
+      {key:'oblique',name:'倾斜航线',icon:'📐'},
+      {key:'waypoint',name:'航点航线',icon:'📍'},
+      {key:'area',name:'面状巡检',icon:'⬛'},
+      {key:'facade',name:'立面航线',icon:'🏗️'},
+    ];
+
+    const routes = [
+      {id:1,name:'鄂荆线1#-50#精细航线',pts:7,dist:12.6,mins:38,type:'航点航线'},
+      {id:2,name:'武阳线通道航线-北段',pts:12,dist:24.3,mins:62,type:'通道航线'},
+      {id:3,name:'江汉线正射建模航线',pts:18,dist:8.4,mins:45,type:'正射航线'},
+      {id:4,name:'鄂荆线35#-60#精细航线',pts:6,dist:9.8,mins:32,type:'航点航线'},
+    ];
+
+    const defects = reactive([
+      {id:1,type:'绝缘子破损',icon:'⚡',level:'严重',lc:'b-danger',loc:'鄂荆线 #23塔',date:'2024-04-28',conf:94,status:'待处理',sc:'b-warning'},
+      {id:2,type:'导线磨损',icon:'🔌',level:'一般',lc:'b-warning',loc:'武阳线 #11塔',date:'2024-04-28',conf:87,status:'处理中',sc:'b-info'},
+      {id:3,type:'设备发热',icon:'🌡️',level:'严重',lc:'b-danger',loc:'鄂荆线 #31塔',date:'2024-04-27',conf:92,status:'待处理',sc:'b-warning'},
+      {id:4,type:'杆塔异物',icon:'🪺',level:'轻微',lc:'b-info',loc:'江汉线 #7塔',date:'2024-04-27',conf:78,status:'已处理',sc:'b-success'},
+      {id:5,type:'防震锤偏移',icon:'🔧',level:'一般',lc:'b-warning',loc:'武阳线 #18塔',date:'2024-04-26',conf:83,status:'待处理',sc:'b-warning'},
+      {id:6,type:'绝缘子污秽',icon:'💧',level:'轻微',lc:'b-info',loc:'鄂荆线 #42塔',date:'2024-04-26',conf:71,status:'待处理',sc:'b-warning'},
+    ]);
+
+    const reportList = [
+      {id:1,name:'500kV鄂荆线精细化巡检报告-2024-04',line:'500kV 鄂荆线',date:'2024-04-28',defs:7,status:'已审核',bc:'b-success'},
+      {id:2,name:'220kV武阳线通道巡检报告-2024-04',line:'220kV 武阳线',date:'2024-04-27',defs:3,status:'待审核',bc:'b-warning'},
+      {id:3,name:'110kV江汉线精细化巡检报告-2024-04',line:'110kV 江汉线',date:'2024-04-25',defs:12,status:'已审核',bc:'b-success'},
+      {id:4,name:'500kV鄂荆线通道巡检报告-2024-03',line:'500kV 鄂荆线',date:'2024-03-31',defs:5,status:'已审核',bc:'b-success'},
+    ];
+
+    const dataFiles = [
+      {id:1,name:'IMG_240428_091523_#23.jpg',type:'图像',task:'TASK-240428-001',loc:'鄂荆线 #23塔',size:'4.2 MB',date:'2024-04-28 09:15'},
+      {id:2,name:'VID_240428_092011.mp4',type:'视频',task:'TASK-240428-001',loc:'鄂荆线 #24塔',size:'245 MB',date:'2024-04-28 09:20'},
+      {id:3,name:'CLOUD_240428_#23.las',type:'点云',task:'TASK-240428-001',loc:'鄂荆线 #23塔',size:'1.8 GB',date:'2024-04-28 09:25'},
+      {id:4,name:'IMG_240428_073015_#11.jpg',type:'图像',task:'TASK-240428-002',loc:'武阳线 #11塔',size:'3.9 MB',date:'2024-04-28 07:30'},
+      {id:5,name:'IMG_240428_073142_#12.jpg',type:'图像',task:'TASK-240428-002',loc:'武阳线 #12塔',size:'4.1 MB',date:'2024-04-28 07:31'},
+      {id:6,name:'CLOUD_240427_#7.las',type:'点云',task:'TASK-240427-003',loc:'江汉线 #7塔',size:'2.2 GB',date:'2024-04-27 15:10'},
+    ];
+
+    const remCtrl = reactive([
+      {icon:'📡',label:'云台控制',desc:'调整拍摄角度',on:false},
+      {icon:'📷',label:'相机控制',desc:'拍照/录像',on:false},
+      {icon:'📢',label:'喊话器',desc:'远程语音广播',on:false},
+      {icon:'💡',label:'探照灯',desc:'补光灯开关',on:false},
+      {icon:'🔄',label:'一键起飞',desc:'执行任务',on:false},
+      {icon:'🏠',label:'立即返航',desc:'中断并返回机库',on:false},
+    ]);
+
+    const aiClasses = ['绝缘子破损','导线磨损','设备发热','杆塔异物','防震锤偏移','绝缘子污秽','杆塔倾斜','违规入侵'];
+
+    return {
+      page, pageTitle, currentTime,
+      devTab, issTab, activeRType, activeRoute,
+      showBindModal, showTaskModal, showRemoteModal,
+      showDefModal, showReportModal, showRptDetail,
+      selDefect,
+      droneFleet, recentTasks, hangars, hangarDevices,
+      devices, tasks, routeTypes, routes,
+      defects, reportList, dataFiles,
+      remCtrl, aiClasses,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

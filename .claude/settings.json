@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"f:/code/DronesProject202603/public/images\")",
+      "Bash(cp \"图12-智能机场自组网技术.png\" \"../../public/images/hangar-mesh-network.png\")",
+      "Bash(cp \"图13-大势低空云平台.png\" \"../../public/images/cloud-platform-overview.png\")",
+      "Bash(cp \"图14-低空云平台的基础能力.png\" \"../../public/images/platform-capabilities.png\")",
+      "Bash(cp \"图15-接入流程.png\" \"../../public/images/hangar-access-flow.png\")"
+    ]
+  }
+}
